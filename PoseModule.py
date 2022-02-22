@@ -122,7 +122,7 @@ class PoseDetector:
                         cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
         return angle
 
-    def drawCustomizedFigure(self, img, pointsList, r=5, t=3):
+    def drawCustomizedFigure(self, img, pointsList, r=5, t=3, drawExtra=False, blankImg = None, drawPointsBlank = False, drawRacket = True, hand = 'right'):
         '''
         Receives the index the points that the user wants based on
         the mediapipe declaration of the points. Then draw those 
@@ -135,40 +135,77 @@ class PoseDetector:
         :param: img - image in which you want to draw
         :param: r - radius of circle which will be drawn
         :param: t - thickness used to draw line
+        :param: drawExtra - boolean that specifies if stick figure is to be drawn on blank img
+        :param: blankImg - boolean that specifies if blank img is to be drawn
+        :param: drawPointsBlank- boolean that specifies if circles are to be drawn on blank img
+        :param: drawRacket - boolean that specifies if racket is to be drawn
+        :param: hand - string that determines what hand the racket will be drawn on 
         :return: None
         '''
         #finding the location of the nose so a new 'head' can be created
         xNose, yNose = self.lmList[0][1:3] #nose is index 0 of the mediapipe model
         cv2.circle(img, (xNose, yNose), 15, (0, 0, 255), t)
 
-
-
         #list containing only the specified landmarks. i.e. [[x1,y2], [x2,y2]...]
         specificLms = []
         for i in range(len(pointsList)):
             x,y = self.lmList[pointsList[i]][1:3] #get x,y from list that contains [id,x,y,z]
             specificLms.append((x,y))
-            #draw a circle only in the points that the user chooses:
-            cv2.circle(img, (x,y), r, (0, 0, 255), cv2.FILLED)
 
-        #connect points new_index = old_index - 11 
-        #drawing stick figure - make this customizabe to make sure it works with the user selecting different points
-        cv2.line(img, specificLms[1], specificLms[0], (255, 0, 255), t)
-        cv2.line(img, specificLms[1], specificLms[3], (255, 0, 255), t)
-        cv2.line(img, specificLms[1], specificLms[13], (255, 0, 255), t)
-        cv2.line(img, specificLms[13], specificLms[12], (255, 0, 255), t)
-        cv2.line(img, specificLms[13], specificLms[15], (255, 0, 255), t)
-        cv2.line(img, specificLms[15], specificLms[17], (255, 0, 255), t)
-        cv2.line(img, specificLms[0], specificLms[12], (255, 0, 255), t)
-        cv2.line(img, specificLms[12], specificLms[14], (255, 0, 255), t)
-        cv2.line(img, specificLms[14], specificLms[16], (255, 0, 255), t)
-        cv2.line(img, specificLms[0], specificLms[2], (255, 0, 255), t)
-        cv2.line(img, specificLms[3], specificLms[5], (255, 0, 255), t)
-        cv2.line(img, specificLms[2], specificLms[4], (255, 0, 255), t)
+            if i not in range(4,12): #do not draw "hand points" (15-11,23-11)
+                #draw a circle only in the points that the user chooses:
+                cv2.circle(img, (x,y), r, (0, 0, 255), cv2.FILLED)
+                if drawPointsBlank:
+                    cv2.circle(blankImg, (x,y), r, (0, 0, 255), cv2.FILLED)
+
+
+        if drawExtra == False:
+            #connect points new_index = old_index - 11 #change this!
+            #drawing stick figure - make this customizabe to make sure it works with the user selecting different points
+            cv2.line(img, specificLms[1], specificLms[0], (255, 0, 255), t)
+            cv2.line(img, specificLms[1], specificLms[3], (255, 0, 255), t)
+            cv2.line(img, specificLms[1], specificLms[13], (255, 0, 255), t)
+            cv2.line(img, specificLms[13], specificLms[12], (255, 0, 255), t)
+            cv2.line(img, specificLms[13], specificLms[15], (255, 0, 255), t)
+            cv2.line(img, specificLms[15], specificLms[17], (255, 0, 255), t)
+            cv2.line(img, specificLms[0], specificLms[12], (255, 0, 255), t)
+            cv2.line(img, specificLms[12], specificLms[14], (255, 0, 255), t)
+            cv2.line(img, specificLms[14], specificLms[16], (255, 0, 255), t)
+            cv2.line(img, specificLms[0], specificLms[2], (255, 0, 255), t)
+            cv2.line(img, specificLms[3], specificLms[5], (255, 0, 255), t)
+            cv2.line(img, specificLms[2], specificLms[4], (255, 0, 255), t)
+        else:
+            #connect points new_index = old_index - 11 #change this!
+            #drawing stick figure - make this customizabe to make sure it works with the user selecting different points
+            cv2.circle(blankImg, (xNose, yNose), 20, (0, 0, 255), t) #create head
+            cv2.line(blankImg, specificLms[1], specificLms[0], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[1], specificLms[3], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[1], specificLms[13], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[13], specificLms[12], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[13], specificLms[15], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[15], specificLms[17], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[0], specificLms[12], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[12], specificLms[14], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[14], specificLms[16], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[0], specificLms[2], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[3], specificLms[5], (255, 0, 255), t)
+            cv2.line(blankImg, specificLms[2], specificLms[4], (255, 0, 255), t)
+        
+        #draw racket on both the blank img and the regular img
+        if drawRacket and (hand == 'right'):
+            #calculate racket direction:
+            #landmark20/2+landmark18/2
+            #landmark9/2+landmark7/2 - (x1+x2/2),(y1+y2/2)
+            racketDirection = ((specificLms[9][0]+specificLms[7][0])//2, (specificLms[9][1]+specificLms[7][1])//2)
+            # print(f'{racketDirection = }')
+            # print(f'{specificLms[8] = }')
+            # cv2.line(img, specificLms[5], (specificLms[8][0] + 50, specificLms[8][1] + 50), (255, 0, 0), t)
+            cv2.line(img, racketDirection, (racketDirection[0] + 50, racketDirection[1] + 50), (255, 0, 0), t)
+
+            
             
 
             
-
 
     def findDistance(self, p1, p2, img, draw=True, r=15, t=3):
         x1, y1 = self.lmList[p1][1:]
