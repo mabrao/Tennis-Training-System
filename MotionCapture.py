@@ -66,5 +66,7 @@ class MotionCapture():
                 cv2.imshow('Stick Figure', blankImg)
 
 
-mc = MotionCapture()
-mc.main()
+#In case you want to run this file
+if __name__ == '__main__':
+    mc = MotionCapture()
+    mc.main()
