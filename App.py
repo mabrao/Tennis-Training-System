@@ -1,14 +1,16 @@
 #kivy imports:
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
-# from kivy.uix.checkbox import CheckBox
+from kivy.uix.checkbox import CheckBox
+from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 
 
-from MotionCapture import MotionCapture
+from PoseModule import PoseDetector
 import os
 import cv2
 
@@ -17,29 +19,38 @@ class MainPage(App):
 
     def build(self):
         '''
-        :return:
+        :return: layout
         '''
-        #create motion capture object
-        self.mc = MotionCapture()
+        #create pose module object
+        self.detector = PoseDetector()
+        
+        #create landmarks list to be fed
+        self.lmDraw = [lm for lm in range(11,29)] #create a list from 11 to 28
 
         #create main layout components
-        self.camImage = Image(size_hint=(1,.8))
-        self.cameraButton = Button(text='Record', on_press=(self.recordVideo), size_hint=(1,.1))
-        self.stopButton = Button(text='Stop', on_press=(self.stopRecording), size_hint=(1,.1))
-        # self.poseCheck = CheckBox(text='Pose Estimation On', on_press=(self.poseEstimationOn), size_hint=(1,.1))
+        #size hint is (width%, height%)
+        self.camImage = Image(size_hint=(1,.6), pos_hint={'x':0, 'top':1})
+        self.cameraButton = Button(text='Record', on_press=(self.recordVideo), size_hint=(.3,.1), pos_hint={'x':0.2, 'top':0.4})
+        self.stopButton = Button(text='Stop', on_press=(self.stopRecording), size_hint=(.3,.1), pos_hint={'x':0.5, 'top':0.4})
+        self.poseCheck = CheckBox(active = False, size_hint=(.1,.1), pos_hint={'x':0.3, 'top':0.3})
+        self.poseLabel = Label(text='Pose estimation off', size_hint=(.1,.1), pos_hint={'x':0.5, 'top':0.3})
+
+        self.poseCheck.bind(active = self.poseEstimationOn)
 
         #add components to layout:
-        layout = BoxLayout(orientation='vertical')
+        # layout = BoxLayout(orientation='vertical', spacing=10)
+        layout = FloatLayout()
         layout.add_widget(self.camImage)
         layout.add_widget(self.cameraButton)
         layout.add_widget(self.stopButton)
-        # layout.add_widget(self.poseCheck)
+        layout.add_widget(self.poseCheck)
+        layout.add_widget(self.poseLabel)
 
         #setup video capture device
         self.camera = cv2.VideoCapture(0)
 
         #setup for video recording
-        self.filename = 'savedVideo.avi'
+        self.filename = 'savedVideo.mp4'
         self.frames_per_second = 33.0
         self.res = '720p'
 
@@ -60,6 +71,7 @@ class MainPage(App):
         }
 
         self.record = False #set recording to false
+        self.pose = False #set pose estimation to false
         self.out = cv2.VideoWriter(self.filename, self.get_video_type(), 25, self.get_dims())
 
         #Run the method update 1 / fps.
@@ -90,7 +102,7 @@ class MainPage(App):
         self.filename, ext = os.path.splitext(self.filename)
         if ext in self.video_type:
             return  self.video_type[ext]
-        return self.video_type['avi']
+        return self.video_type['mp4']
 
     def recordVideo(self, *args):
         self.record = True
@@ -99,8 +111,13 @@ class MainPage(App):
     def stopRecording(self, *args):
         self.record= False
     
-    def poseEstimationOn(self, *args):
-        pass
+    def poseEstimationOn(self, checkboxInstance, isActive):
+        if isActive:
+            self.poseLabel.text = "Pose estimation on"
+            self.pose = True
+        else:
+            self.poseLabel.text = "Pose estimation off"
+            self.pose = False
 
     
     def update(self, *args):
@@ -111,8 +128,19 @@ class MainPage(App):
         #read frame from opencv
         _, self.frame = self.camera.read()
 
+
+        if self.pose:
+            #find pose landmarks and do not draw them
+            self.frame = self.detector.findPose(self.frame, draw=False)
+            #get all landmark data and do not draw bounding box
+            lmList, bboxInfo = self.detector.findPosition(self.frame, draw = False) 
+            #create customized figure
+            self.detector.drawCustomizedFigure(self.frame, self.lmDraw, drawRacket=False)
+
         if self.record:
             self.out.write(self.frame)
+        
+
 
         # Flip horizontall and convert image to texture
         buf = cv2.flip(self.frame, 0).tostring()
