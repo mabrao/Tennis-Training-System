@@ -23,6 +23,75 @@ class MotionCapture():
         self.posList = []
     
 
+    def createRacketBox(self, image):
+        success, img = self.cap.read() #getting the image
+
+        #find pose landmarks and do not draw them
+        img = self.detector.findPose(img, draw=False) 
+
+        # #resize image
+        # img = cv2.resize(img, (self.width,self.height))
+        width, height = img.shape[0], img.shape[1]
+
+        #get all landmark data and do not draw bounding box
+        lmList, bboxInfo = self.detector.findPosition(img, draw = False) #set a bigger bounding box (with hands)
+        
+        # print(f'{bboxInfo}')
+        self.cx, self.cy = bboxInfo['center'][0], bboxInfo['center'][1]
+        x1, y1 = self.cx - width//4, self.cy + height//7
+        x2, y2 = self.cx + width//2, self.cy + height//7
+        x3, y3 = self.cx + width//2, 0 #set the box until the top of the image
+        x4, y4 = self.cx - width//4, 0 #set the box until the top of the image
+
+        #debugging and visualization of personalized bounding box:
+
+        # print(f'cx = {cx} cy = {cy} width = {width} height = {height}') 
+        # print(f'x1 = {x1} y1 = {y1}')
+
+        cutImg = img[y3:y1, x1:x2]
+        #cv2.imshow('Cut image', cutImg)
+        
+        return cutImg
+
+        
+        
+    
+    def detectAndDrawRacket(self, image):
+        params = cv2.SimpleBlobDetector_Params()
+
+        params.filterByArea = True
+        params.minArea = 100 #what is this measurement
+
+        # params.filterByCircularity = True
+        # params.minCircularity = 0.9
+
+        # params.filterByConvexity = True
+        # params.minConvexity = 0.2
+
+        # params.filterByInertia = True
+        # params.minInertiaRatio = 0.01
+
+        #create a detector with the parameters
+        detector = cv2.SimpleBlobDetector_create(params)
+
+        #detect blobs
+        keypoints = detector.detect(image)
+
+        # Draw blobs on our image as red circles
+        blank = np.zeros((1, 1))
+        blobs = cv2.drawKeypoints(image, keypoints, blank, (0, 0, 255),
+                                cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        
+        number_of_blobs = len(keypoints)
+        text = "Number of Circular Blobs: " + str(len(keypoints))
+        cv2.putText(blobs, text, (20, 550),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 100, 255), 2)
+
+        
+        # Show blobs
+        cv2.imshow("Filtering Circular Blobs Only", blobs)
+    
+
     def main(self):
         while True:
             success, img = self.cap.read() #getting the image
@@ -37,6 +106,9 @@ class MotionCapture():
             lmList, bboxInfo = self.detector.findPosition(img, draw = False) 
 
             self.detector.drawCustomizedFigure(img, self.lmDraw, drawRacket=False)
+
+            cutImg = self.createRacketBox(img)
+            self.detectAndDrawRacket(cutImg)
 
             cv2.imshow('Image', img)
 

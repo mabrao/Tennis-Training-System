@@ -8,14 +8,15 @@ from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
+from kivy.uix.screenmanager import ScreenManager, Screen
 
 
 from PoseModule import PoseDetector
 import os
 import cv2
+import numpy as np
 
-
-class MainPage(App):
+class MainPage(App, Screen):
 
     def build(self):
         '''
@@ -34,8 +35,12 @@ class MainPage(App):
         self.stopButton = Button(text='Stop', on_press=(self.stopRecording), size_hint=(.3,.1), pos_hint={'x':0.5, 'top':0.4})
         self.poseCheck = CheckBox(active = False, size_hint=(.1,.1), pos_hint={'x':0.3, 'top':0.3})
         self.poseLabel = Label(text='Pose estimation off', size_hint=(.1,.1), pos_hint={'x':0.5, 'top':0.3})
+        self.bgCheck = CheckBox(active = False, size_hint=(.1,.1), pos_hint={'x':0.3, 'top':0.225})
+        self.bgCheckLabel = Label(text='Blank background off', size_hint=(.1,.1), pos_hint={'x':0.5, 'top':0.225})
+        
 
         self.poseCheck.bind(active = self.poseEstimationOn)
+        self.bgCheck.bind(active = self.bgCheckOn)
 
         #add components to layout:
         # layout = BoxLayout(orientation='vertical', spacing=10)
@@ -45,6 +50,8 @@ class MainPage(App):
         layout.add_widget(self.stopButton)
         layout.add_widget(self.poseCheck)
         layout.add_widget(self.poseLabel)
+        layout.add_widget(self.bgCheck)
+        layout.add_widget(self.bgCheckLabel)
 
         #setup video capture device
         self.camera = cv2.VideoCapture(0)
@@ -72,6 +79,7 @@ class MainPage(App):
 
         self.record = False #set recording to false
         self.pose = False #set pose estimation to false
+        self.poseBackground = False #set blank background to false
         self.out = cv2.VideoWriter(self.filename, self.get_video_type(), 25, self.get_dims())
 
         #Run the method update 1 / fps.
@@ -111,6 +119,15 @@ class MainPage(App):
     def stopRecording(self, *args):
         self.record= False
     
+    def bgCheckOn(self, checkboxInstance, isActive):
+        if isActive:
+            self.bgCheckLabel.text = "Blank background on"
+            self.poseBackground = True
+        else:
+            self.bgCheckLabel.text = "Blank background off"
+            self.poseBackground = False
+
+
     def poseEstimationOn(self, checkboxInstance, isActive):
         if isActive:
             self.poseLabel.text = "Pose estimation on"
@@ -129,13 +146,26 @@ class MainPage(App):
         _, self.frame = self.camera.read()
 
 
-        if self.pose:
+        if self.pose: #MAKE THIS A FUNCTION
             #find pose landmarks and do not draw them
             self.frame = self.detector.findPose(self.frame, draw=False)
             #get all landmark data and do not draw bounding box
             lmList, bboxInfo = self.detector.findPosition(self.frame, draw = False) 
             #create customized figure
             self.detector.drawCustomizedFigure(self.frame, self.lmDraw, drawRacket=False)
+        
+        if self.poseBackground:
+            width, height = self.get_dims()
+            self.blankImg = np.zeros((height, width, 3), np.uint8)
+            if self.pose: #MAKE THIS A FUNCTION
+                #find pose landmarks and do not draw them
+                self.frame = self.detector.findPose(self.frame, draw=False)
+                #get all landmark data and do not draw bounding box
+                lmList, bboxInfo = self.detector.findPosition(self.frame, draw = False) 
+                #create customized figure
+                self.detector.drawCustomizedFigure(self.frame, self.lmDraw, drawRacket=False, blankImg = self.blankImg, drawExtra=True)
+            self.frame = self.blankImg
+
 
         if self.record:
             self.out.write(self.frame)
@@ -150,6 +180,12 @@ class MainPage(App):
 
 
 
+class AnalysisPage(App, Screen):
+    pass
+
+
+class WindowManager(ScreenManager):
+    pass
     
 
 
