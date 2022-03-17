@@ -50,13 +50,16 @@ class MotionCapture():
 
         cutImg = img[y3:y1, x1:x2]
         #cv2.imshow('Cut image', cutImg)
-        
+
         return cutImg
 
         
         
     
     def detectAndDrawRacket(self, image):
+        '''
+        Thus is currently not working.
+        '''
         params = cv2.SimpleBlobDetector_Params()
 
         params.filterByArea = True
