@@ -9,7 +9,6 @@ from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.filechooser import FileChooserIconView
-from kivy.uix.videoplayer import VideoPlayer
 
 
 from PoseModule import PoseDetector
@@ -203,26 +202,53 @@ class AnalysisPage(Screen):
         super(AnalysisPage, self).__init__(**kwargs)
 
         #self.loadedImage = Image(size_hint=(1,.6), pos_hint={'x':0, 'top':1})
-        self.videoplayer = VideoPlayer(source='./Videos/federer_serve_side_cut.mp4', size_hint=(1,.7), pos_hint={'x':0, 'top':1})
-        self.videoplayer.state = 'stop'
-        self.videoplayer.options = {'eos':'loop'} #set end of stream behavior to loop
-        self.videoplayer.allow_stretch = True
-        self.backButton = Button(text='go back', on_press=(self.goBack), size_hint=(.15,.1), pos_hint={'x':0.35, 'top':0.25})
-        self.filesButton = Button(text='choose files', on_press=(self.openFileManager), size_hint=(.15,.1), pos_hint={'x':0.5, 'top':0.25})
+        #self.videoplayer = VideoPlayer(source='./Videos/federer_serve_side_cut.mp4', size_hint=(1,.7), pos_hint={'x':0, 'top':1})
+        # self.videoplayer.state = 'stop'
+        # self.videoplayer.options = {'eos':'loop'} #set end of stream behavior to loop
+        # self.videoplayer.allow_stretch = True
+        self.videofile = './Videos/federer_serve_side_cut.mp4' #example video
+        self.cap = cv2.VideoCapture(self.videofile)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0) #looping the video
+        self.videoplayer = Image(size_hint=(1,.7), pos_hint={'x':0, 'top':1})
+        self.pauseButton = Button(text = 'play/\npause' , on_press=self.pause, size_hint=(.075,.075), pos_hint={'x':0.35, 'top':0.25})
+        self.backButton = Button(text='go back', on_press=(self.goBack), size_hint=(.15,.1), pos_hint={'x':0.35, 'top':0.15})
+        self.filesButton = Button(text='choose files', on_press=(self.openFileManager), size_hint=(.15,.1), pos_hint={'x':0.5, 'top':0.15})
+        self.poseCheck = CheckBox(active = False, size_hint=(.1,.1), pos_hint={'x':0.425, 'top':0.24})
+        self.poseLabel = Label(text='Pose estimation off', size_hint=(.1,.1), pos_hint={'x':0.55, 'top':0.24})
+        self.bgCheck = CheckBox(active = False, size_hint=(.1,.1), pos_hint={'x':0.425, 'top':0.285})
+        self.bgCheckLabel = Label(text='Blank Background off', size_hint=(.1,.1), pos_hint={'x':0.55, 'top':0.285})
 
         #frame is empty until it gets selected:
         width, height = std_dimensions['480p'] #setting as 480p for now, make it selectable later
         self.blankImg = np.zeros((height, width, 3), np.uint8)
+        self.res = '720p'
+
+        #declaring button variables:
+        self.pauseVideo = False
+
+        #for pose estimation:
+        self.detector = PoseDetector()
+        self.pose = False #set pose estimation to false
+        self.poseBackground = False #set blank background to false
+        #create landmarks list to be fed
+        self.lmDraw = [lm for lm in range(11,29)] #create a list from 11 to 28
+        self.poseCheck.bind(active = self.poseEstimationOn)
+        self.bgCheck.bind(active = self.bgCheckOn)
 
         #add widgets to page:
         #self.add_widget(self.loadedImage)
         self.add_widget(self.backButton)
         self.add_widget(self.filesButton)
         self.add_widget(self.videoplayer)
+        self.add_widget(self.pauseButton)
+        self.add_widget(self.poseCheck)
+        self.add_widget(self.poseLabel)
+        self.add_widget(self.bgCheck)
+        self.add_widget(self.bgCheckLabel)
 
         #Run the method update 1 / fps.
         #Check if fps is actually 33!
-        #Clock.schedule_interval(self.update, 1.0/33.0)
+        Clock.schedule_interval(self.update, 1.0/33.0)
     
     def goBack(self, *args):
         self.manager.current = 'main'
@@ -230,17 +256,91 @@ class AnalysisPage(Screen):
     def openFileManager(self, *args):
         self.manager.current = 'files'
     
-    def update(self, *args):
-        try:
-            print(FileChooserPage.exportFile(FileChooserPage))
-        except:
-            pass
+    def changeVideoFile(self, video, *args):
+        self.cap = cv2.VideoCapture(video)
+    
+    def pause(self, *args):
+        if self.pauseVideo:
+            self.pauseVideo = False
+        else:
+            self.pauseVideo = True
+    
+    def bgCheckOn(self, checkboxInstance, isActive): #REFACTOR:
+        if isActive:
+            self.bgCheckLabel.text = "Blank background on"
+            self.poseBackground = True
+        else:
+            self.bgCheckLabel.text = "Blank background off"
+            self.poseBackground = False
+        
+    def poseEstimationOn(self, checkboxInstance, isActive): #REFACTOR:
+        if isActive:
+            self.poseLabel.text = "Pose estimation on"
+            self.pose = True
+        else:
+            self.poseLabel.text = "Pose estimation off"
+            self.pose = False
+    
+    def change_res(self, cap, width, height): #REFACTOR
+        '''
+        Set resolution for the video capture
+        Function adapted from https://kirr.co/0l6qmh
+        '''
+        cap.set(3, width)
+        cap.set(4, height)
 
-        # Flip horizontall and convert image to texture ##This can be made into a function
-        # buf = cv2.flip(self.blankImg, 0).tostring()
-        # imgTexture = Texture.create(size=(self.blankImg.shape[1], self.blankImg.shape[0]), colorfmt='bgr')
-        # imgTexture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
-        # self.loadedImage.texture = imgTexture
+    def get_dims(self): #REFACTOR
+        '''
+        Grab resolution dimensions and set video capture to it.
+        '''
+        width, height = std_dimensions["480p"]
+        if self.res in std_dimensions:
+            width,height = std_dimensions[self.res]
+        ## change the current caputre device
+        ## to the resulting resolution
+        self.change_res(self.cap, width, height)
+        return width, height
+
+    def update(self, *args):
+        if self.pauseVideo == False:
+            self.ret, self.frame = self.cap.read()
+            if self.ret:
+                if self.pose: #MAKE THIS A FUNCTION (CHANGE: THIS IS REPEATING ON THE MAIN PAGE)
+                    try:
+                        #find pose landmarks and do not draw them
+                        self.frame = self.detector.findPose(self.frame, draw=False)
+                        #get all landmark data and do not draw bounding box
+                        lmList, bboxInfo = self.detector.findPosition(self.frame, draw = False) 
+                        #create customized figure
+                        self.detector.drawCustomizedFigure(self.frame, self.lmDraw, drawRacket=False)
+                    except:
+                        pass
+                
+                
+                if self.poseBackground:
+                    width, height = self.get_dims()
+                    self.blankImg = np.zeros((height, width, 3), np.uint8)
+                    if self.pose:
+                        try:
+                            #find pose landmarks and do not draw them
+                            self.frame = self.detector.findPose(self.frame, draw=False)
+                            #get all landmark data and do not draw bounding box
+                            lmList, bboxInfo = self.detector.findPosition(self.frame, draw = False) 
+                            #create customized figure
+                            self.detector.drawCustomizedFigure(self.frame, self.lmDraw, drawRacket=False, blankImg = self.blankImg, drawExtra=True)
+                        except:
+                            pass
+                    self.frame = self.blankImg
+                
+                # Flip horizontall and convert image to texture ##This can be made into a function
+                buf = cv2.flip(self.frame, 0).tostring()
+                imgTexture = Texture.create(size=(self.frame.shape[1], self.frame.shape[0]), colorfmt='bgr')
+                imgTexture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
+                self.videoplayer.texture = imgTexture
+            else:
+                self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0) #looping the video
+        else:
+            pass
 
 
 
@@ -265,8 +365,8 @@ class FileChooserPage(Screen):
         try:
             self.videoPath = str(self.files.selection[0]) #grab the filename and directory
             self.manager.current = 'analysis' #change page
-            self.manager.current_screen.videoplayer.source=self.videoPath #change video player's source to selected file
-            self.manager.current_screen.videoplayer.state = 'play'
+            #print(self.manager.current_screen.videofile) #debug
+            self.manager.current_screen.changeVideoFile(self.videoPath) #change video player's source to selected file
 
         except:
             pass
