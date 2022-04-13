@@ -2,6 +2,7 @@
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.togglebutton import ToggleButton
+from kivy.uix.widget import Widget
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.label import Label
 from kivy.uix.image import Image
@@ -9,6 +10,11 @@ from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.filechooser import FileChooserIconView
+
+#for drawing:
+from kivy.graphics.vertex_instructions import Line
+from kivy.graphics.context_instructions import Color
+from kivy.properties import ListProperty
 
 
 from PoseModule import PoseDetector
@@ -34,7 +40,6 @@ video_type = {
     #'mp4': cv2.VideoWriter_fourcc(*'H264'),
     'mp4': cv2.VideoWriter_fourcc(*'XVID'),
 }
-
 
 
 class MainPage(Screen):
@@ -74,7 +79,7 @@ class MainPage(Screen):
         self.camera = cv2.VideoCapture(0)
 
         #setup for video recording
-        self.filename = 'savedVideo.mp4'
+        self.filename = 'savedVideo.avi'
         self.frames_per_second = 33.0
         self.res = '720p'
 
@@ -114,7 +119,7 @@ class MainPage(Screen):
         self.filename, ext = os.path.splitext(self.filename)
         if ext in video_type:
             return  video_type[ext]
-        return video_type['mp4']
+        return video_type['avi']
 
 
     def recordVideo(self, *args):
@@ -195,17 +200,28 @@ class MainPage(Screen):
         imgTexture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
         self.camImage.texture = imgTexture
 
+class Painter(Widget):
+    color = ListProperty([0,0,0,1])
 
+    def on_touch_down(self, touch):
+        with self.canvas:
+            Color(rgba=self.color)
+            touch.ud['line'] = Line(points=(touch.x, touch.y))
+    
+    def on_touch_move(self, touch):
+        touch.ud['line'].points += [touch.x, touch.y]
+
+    def clear_canvas(self, *args):
+        self.canvas.clear()
+
+    def change_color(self, instance):
+            self.color = instance.background_color
 
 class AnalysisPage(Screen):
     def __init__(self, **kwargs):
         super(AnalysisPage, self).__init__(**kwargs)
+        
 
-        #self.loadedImage = Image(size_hint=(1,.6), pos_hint={'x':0, 'top':1})
-        #self.videoplayer = VideoPlayer(source='./Videos/federer_serve_side_cut.mp4', size_hint=(1,.7), pos_hint={'x':0, 'top':1})
-        # self.videoplayer.state = 'stop'
-        # self.videoplayer.options = {'eos':'loop'} #set end of stream behavior to loop
-        # self.videoplayer.allow_stretch = True
         self.videofile = './Videos/federer_serve_side_cut.mp4' #example video
         self.cap = cv2.VideoCapture(self.videofile)
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0) #looping the video
@@ -217,6 +233,19 @@ class AnalysisPage(Screen):
         self.poseLabel = Label(text='Pose estimation off', size_hint=(.1,.1), pos_hint={'x':0.55, 'top':0.24})
         self.bgCheck = CheckBox(active = False, size_hint=(.1,.1), pos_hint={'x':0.425, 'top':0.285})
         self.bgCheckLabel = Label(text='Blank Background off', size_hint=(.1,.1), pos_hint={'x':0.55, 'top':0.285})
+
+        #operations related to painter:
+        self.painter = Painter()
+        self.clearButton = Button(text='Clear', on_press=(self.painter.clear_canvas), size_hint=(.15,.1), pos_hint={'x':0.15, 'top':0.15})
+
+        #creating buttons for color selection:
+        self.green = Button(background_color = 'green', size_hint=(.05,.05), pos_hint={'x':0.15, 'top':0.25}, on_press=(self.painter.change_color))
+        self.red = Button(background_color = 'red', size_hint=(.05,.05), pos_hint={'x':0.2, 'top':0.25}, on_press=(self.painter.change_color))
+        self.blue = Button(background_color = 'blue', size_hint=(.05,.05), pos_hint={'x':0.25, 'top':0.25}, on_press=(self.painter.change_color))
+        self.white = Button(background_color = 'white', size_hint=(.05,.05), pos_hint={'x':0.15, 'top':0.20}, on_press=(self.painter.change_color))
+        self.yellow = Button(background_color = 'yellow', size_hint=(.05,.05), pos_hint={'x':0.2, 'top':0.20}, on_press=(self.painter.change_color))
+        self.purple = Button(background_color = 'purple', size_hint=(.05,.05), pos_hint={'x':0.25, 'top':0.20}, on_press=(self.painter.change_color))
+        
 
         #frame is empty until it gets selected:
         width, height = std_dimensions['480p'] #setting as 480p for now, make it selectable later
@@ -236,7 +265,6 @@ class AnalysisPage(Screen):
         self.bgCheck.bind(active = self.bgCheckOn)
 
         #add widgets to page:
-        #self.add_widget(self.loadedImage)
         self.add_widget(self.backButton)
         self.add_widget(self.filesButton)
         self.add_widget(self.videoplayer)
@@ -245,11 +273,20 @@ class AnalysisPage(Screen):
         self.add_widget(self.poseLabel)
         self.add_widget(self.bgCheck)
         self.add_widget(self.bgCheckLabel)
+        self.add_widget(self.painter)
+        self.add_widget(self.clearButton)
+        self.add_widget(self.green)
+        self.add_widget(self.red)
+        self.add_widget(self.blue)
+        self.add_widget(self.white)
+        self.add_widget(self.yellow)
+        self.add_widget(self.purple)
 
         #Run the method update 1 / fps.
         #Check if fps is actually 33!
         Clock.schedule_interval(self.update, 1.0/33.0)
     
+        
     def goBack(self, *args):
         self.manager.current = 'main'
     
@@ -342,8 +379,6 @@ class AnalysisPage(Screen):
         else:
             pass
 
-
-
 class FileChooserPage(Screen):
     def __init__(self, **kwargs):
         super(FileChooserPage, self).__init__(**kwargs)
@@ -371,13 +406,9 @@ class FileChooserPage(Screen):
         except:
             pass
     
-
-
 class WindowManager(ScreenManager):
     def __init__(self, **kwargs):
         super(WindowManager, self).__init__(**kwargs)
-
-
 
 class TennisTrainingApp(App):
     def build(self):
@@ -388,6 +419,6 @@ class TennisTrainingApp(App):
         return sm
     
 
-    
+   
 if __name__ == '__main__':
     TennisTrainingApp().run()

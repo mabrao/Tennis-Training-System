@@ -13,12 +13,14 @@ int keyIndex = 0;                // your network key index number (needed only f
 int status = WL_IDLE_STATUS;
 WiFiServer server(80); //create a server at port 80
 
+unsigned long myTime; //this will be used for printing milliseconds
+
 void printWiFiStatus();
 
 void setup() {
   Serial.begin(9600);
 
-  while(!Serial);
+  //while(!Serial); //this is only used when connected to serial monitor
 
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
@@ -77,37 +79,52 @@ void setup() {
 }
 
 void loop() {
+
+  myTime = millis(); //update time since program started
   
   if (IMU.accelerationAvailable()) {
     IMU.readAcceleration(Ax, Ay, Az);
-
-    // Serial.println("Accelerometer data: ");
-    // Serial.print(Ax);
-    // Serial.print('\t');
-    // Serial.print(Ay);
-    // Serial.print('\t');
-    // Serial.println(Az);
-    // Serial.println();
-  }
-
-  if (IMU.gyroscopeAvailable()) {
-    IMU.readGyroscope(Gx, Gy, Gz);
-    
-    // Serial.println("Gyroscope data: ");
-    // Serial.print(Gx);
-    // Serial.print('\t');
-    // Serial.print(Gy);
-    // Serial.print('\t');
-    // Serial.println(Gz);
-    // Serial.println();
 
     WiFiClient client = server.available();   // listen for incoming clients
 
     if (client) {
       // read bytes from the incoming client and write them back
       // to any clients connected to the server:
-      server.write(byte(IMU.readGyroscope(Gx, Gy, Gz))); //write gyroscope data to server
-      Serial.println("Client Connected");
+      //Serial.println("Client Connected");
+      client.print("Time: ");
+      client.print('\t');
+      client.print(myTime);
+      client.print('\n');
+      client.println("Accelerometer data: ");
+      client.print(Ax);
+      client.print('\t');
+      client.print(Ay);
+      client.print('\t');
+      client.println(Az);
+      client.println();
+    }
+  }
+
+  if (IMU.gyroscopeAvailable()) {
+    IMU.readGyroscope(Gx, Gy, Gz);
+
+    WiFiClient client = server.available();   // listen for incoming clients
+
+    if (client) {
+      // read bytes from the incoming client and write them back
+      // to any clients connected to the server:
+      //Serial.println("Client Connected");
+      client.print("Time: ");
+      client.print('\t');
+      client.print(myTime);
+      client.print('\n');
+      client.println("Gyroscope data: ");
+      client.print(Gx);
+      client.print('\t');
+      client.print(Gy);
+      client.print('\t');
+      client.println(Gz);
+      client.println();
     }
     
   }
