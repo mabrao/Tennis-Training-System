@@ -80,54 +80,31 @@ void setup() {
 
 void loop() {
 
-  myTime = millis(); //update time since program started
+  WiFiClient client = server.available();   // listen for incoming clients
+
+  if (client) {
+    // read bytes from the incoming client and write them back
+    // to any clients connected to the server:
+    if (client.available()){
+      client.read(); //reads data being sent by the client so it doesn't add up in the buffer
+      if (IMU.accelerationAvailable()) {
+        IMU.readAcceleration(Ax, Ay, Az);
+        Serial.println("Client Connected");
+        client.print("a");
+        client.print(Ax);
+        client.print(Ay);
+        client.println(Az);
+      }
+      if (IMU.gyroscopeAvailable()) {
+        IMU.readGyroscope(Gx, Gy, Gz);
+        client.print("g");
+        client.print(Gx);
+        client.print(Gy);
+        client.println(Gz);
+    }
+  }
+}
   
-  if (IMU.accelerationAvailable()) {
-    IMU.readAcceleration(Ax, Ay, Az);
-
-    WiFiClient client = server.available();   // listen for incoming clients
-
-    if (client) {
-      // read bytes from the incoming client and write them back
-      // to any clients connected to the server:
-      //Serial.println("Client Connected");
-      client.print("Time: ");
-      client.print('\t');
-      client.print(myTime);
-      client.print('\n');
-      client.println("Accelerometer data: ");
-      client.print(Ax);
-      client.print('\t');
-      client.print(Ay);
-      client.print('\t');
-      client.println(Az);
-      client.println();
-    }
-  }
-
-  if (IMU.gyroscopeAvailable()) {
-    IMU.readGyroscope(Gx, Gy, Gz);
-
-    WiFiClient client = server.available();   // listen for incoming clients
-
-    if (client) {
-      // read bytes from the incoming client and write them back
-      // to any clients connected to the server:
-      //Serial.println("Client Connected");
-      client.print("Time: ");
-      client.print('\t');
-      client.print(myTime);
-      client.print('\n');
-      client.println("Gyroscope data: ");
-      client.print(Gx);
-      client.print('\t');
-      client.print(Gy);
-      client.print('\t');
-      client.println(Gz);
-      client.println();
-    }
-    
-  }
 
   // compare the previous status to the current status
   if (status != WiFi.status()) {
@@ -143,7 +120,7 @@ void loop() {
     }
   }
 
-delay(500);
+//delay(500); //debug
 }
 
 

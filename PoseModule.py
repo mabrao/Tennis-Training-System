@@ -127,10 +127,8 @@ class PoseDetector:
         Receives the index the points that the user wants based on
         the mediapipe declaration of the points. Then draw those 
         points on the image.
-
         The good thing about creating this module is that it can be
         customized to draw the 'stick figure' the way I want.
-
         :param: pointsList - list with the index of the points
         :param: img - image in which you want to draw
         :param: r - radius of circle which will be drawn
