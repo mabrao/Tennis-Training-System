@@ -37,6 +37,7 @@ std_dimensions =  {
 # Types of Codes: http://www.fourcc.org/codecs.php
 video_type = {
     'avi': cv2.VideoWriter_fourcc(*'XVID'),
+    #'avi': cv2.VideoWriter_fourcc(*'MJPG'),
     #'mp4': cv2.VideoWriter_fourcc(*'H264'),
     'mp4': cv2.VideoWriter_fourcc(*'XVID'),
 }
@@ -86,11 +87,11 @@ class MainPage(Screen):
         self.record = False #set recording to false
         self.pose = False #set pose estimation to false
         self.poseBackground = False #set blank background to false
-        self.out = cv2.VideoWriter(self.filename, self.get_video_type(), 25, self.get_dims())
+        self.out = cv2.VideoWriter(self.filename, self.get_video_type(), self.frames_per_second, self.get_dims())
 
         #Run the method update 1 / fps.
         #Check if fps is actually 33!
-        Clock.schedule_interval(self.update, 1.0/33.0)
+        Clock.schedule_interval(self.update, 1.0/self.frames_per_second)
 
     
     def change_res(self, cap, width, height):
@@ -376,8 +377,6 @@ class AnalysisPage(Screen):
                 self.videoplayer.texture = imgTexture
             else:
                 self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0) #looping the video
-        else:
-            pass
 
 class FileChooserPage(Screen):
     def __init__(self, **kwargs):

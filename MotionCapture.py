@@ -1,5 +1,6 @@
 """
 Motion Module for Tennis Training System
+Used for testing.
 By: Matheus Abrao
 """
 

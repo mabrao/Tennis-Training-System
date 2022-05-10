@@ -22,12 +22,12 @@ def write(count):
         msg = s.recv(1024).decode(FORMAT) #buffer (maximum amount of data (bytes) to be received at once)
         
         try:
-            if exists(f'./sensor_data/reading{count}.txt'): #if the file exists write to it in append mode
-                with open(f'./sensor_data/reading{count}.txt', 'a') as f:
+            if exists(f'./sensor_data/backhand{count}.txt'): #if the file exists write to it in append mode
+                with open(f'./sensor_data/backhand{count}.txt', 'a') as f:
                     print('[RECORDING DATA]')
                     f.write(msg)
             else: #if it doesn't exist create the file and write to it
-                with open(f'./sensor_data/reading{count}.txt', 'w') as f:
+                with open(f'./sensor_data/backhand{count}.txt', 'w') as f:
                     print('[RECORDING DATA]')
                     f.write(msg)
         except FileNotFoundError:
