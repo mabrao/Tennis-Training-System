@@ -14,7 +14,7 @@ In this file, I am adding the feature of drawing a personalized stick figure (dr
 In this file I created a user interface using Python Kivy use the pose estimation algorithm to help a tennis player improve its game. 
 
 ### MAIN PAGE
-![This is an image](./styling/main_page.PNG)
+![This is an image](./styling/main_page.png)
 
 ### ANALYSIS PAGE
 ![This is an image](./styling/analysis_one.PNG)
