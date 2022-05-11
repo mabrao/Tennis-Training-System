@@ -162,7 +162,6 @@ class MainPage(Screen):
         #read frame from opencv
         _, self.frame = self.camera.read()
 
-
         if self.pose: #MAKE THIS A FUNCTION
             try:
                 #find pose landmarks and do not draw them
@@ -342,6 +341,11 @@ class AnalysisPage(Screen):
     def update(self, *args):
         if self.pauseVideo == False:
             self.ret, self.frame = self.cap.read()
+            #width, height = self.frame.shape[0], self.frame.shape[1]
+
+            # if width != 720 or height != 1280:
+            #     self.frame = cv2.resize(self.frame, (1080,720))
+
             if self.ret:
                 if self.pose: #MAKE THIS A FUNCTION (CHANGE: THIS IS REPEATING ON THE MAIN PAGE)
                     try:
